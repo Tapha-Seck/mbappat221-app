@@ -1,32 +1,57 @@
 // Fichier : test/widget_test.dart
-// Premier test Flutter : vérifie l'écran de bienvenue de Mbappat 221.
+// Tests de la structure F1 : la barre de 5 onglets et la navigation entre eux.
 //
-// Repères pour un développeur Java :
-//  - test/ joue le rôle de src/test/java ; on lance les tests avec « flutter test » (comme « mvn test »).
-//  - testWidgets(...) ≈ une méthode @Test de JUnit.
-//  - expect(valeur, matcher) ≈ assertThat(valeur, matcher) d'AssertJ / Hamcrest.
-//  - « async / await » : le test attend que Flutter ait fini de dessiner (comme un Future.get() en Java).
+// Repères Java : testWidgets ≈ @Test, expect(x, matcher) ≈ assertThat(x, matcher),
+// group(...) ≈ une classe de test @Nested qui regroupe des tests liés.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:mbappat221_app/main.dart';   // la classe testée (comme un import de sn.lutte...)
+import 'package:mbappat221_app/app.dart';
+
+/// Trouve un libellé DANS la barre d'onglets uniquement.
+/// (Le mot « Galas » apparaît aussi comme titre de l'écran Galas : sans cette précision,
+/// le test trouverait plusieurs « Galas » et ne saurait pas sur lequel appuyer.)
+Finder ongletNomme(String libelle) =>
+    find.descendant(of: find.byType(NavigationBar), matching: find.text(libelle));
+
+/// Lit l'onglet actuellement sélectionné dans la barre.
+int ongletActif(WidgetTester tester) =>
+    tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex;
 
 void main() {
-  testWidgets('Le bouton « Allez ! » fait monter le compteur', (WidgetTester tester) async {
-    // 1. Afficher l'application dans un écran virtuel (pas besoin de téléphone ni de Chrome).
-    await tester.pumpWidget(const Mbappat221App());
+  group('Navigation principale', () {
+    testWidgets('affiche les 5 onglets et démarre sur Accueil', (tester) async {
+      await tester.pumpWidget(const Mbappat221App());
 
-    // 2. Vérifier l'état de départ : find.text cherche un widget Text avec ce contenu exact.
-    expect(find.text('Mbappat 221'), findsOneWidget);
-    expect(find.text('0 « Allez ! »'), findsOneWidget);
+      for (final libelle in ['Accueil', 'Galas', 'Lutteurs', 'Classement', 'Plus']) {
+        expect(ongletNomme(libelle), findsOneWidget);
+      }
+      expect(ongletActif(tester), 0);
+      expect(find.text('La lutte simple sénégalaise'), findsOneWidget);
+    });
 
-    // 3. Appuyer sur le bouton (trouvé grâce à son icône), puis redessiner l'écran.
-    await tester.tap(find.byIcon(Icons.sports_kabaddi));
-    await tester.pump();   // pump() = « dessine l'image suivante » (setState a demandé un nouveau build)
+    testWidgets('un appui sur un onglet change l\'écran affiché', (tester) async {
+      await tester.pumpWidget(const Mbappat221App());
 
-    // 4. Le compteur est passé à 1.
-    expect(find.text('0 « Allez ! »'), findsNothing);
-    expect(find.text('1 « Allez ! »'), findsOneWidget);
+      await tester.tap(ongletNomme('Galas'));
+      await tester.pumpAndSettle();   // attend la fin des animations
+      expect(ongletActif(tester), 1);
+
+      await tester.tap(ongletNomme('Classement'));
+      await tester.pumpAndSettle();
+      expect(ongletActif(tester), 3);
+    });
+
+    testWidgets('l\'onglet Plus affiche un message au toucher', (tester) async {
+      await tester.pumpWidget(const Mbappat221App());
+
+      await tester.tap(ongletNomme('Plus'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Nous contacter'));
+      await tester.pump();   // le SnackBar apparaît
+
+      expect(find.text('Cette rubrique arrive bientôt.'), findsOneWidget);
+    });
   });
 }
