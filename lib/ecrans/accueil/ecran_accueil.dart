@@ -16,7 +16,14 @@ class EcranAccueil extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mbappat 221', style: TextStyle(fontWeight: FontWeight.w900)),
+        toolbarHeight: 64,
+        // Le logo à la place du titre texte. Image.asset lit une image EMBARQUÉE dans l'application
+        // (déclarée dans pubspec.yaml, section assets), comme une ressource de src/main/resources.
+        title: Image.asset(
+          'assets/images/logo_mbappat221.png',
+          height: 46,
+          semanticLabel: 'Mbappat 221',   // lu à voix haute par les lecteurs d'écran (accessibilité)
+        ),
       ),
       // ListView avec padding : tout le contenu défile si l'écran est trop petit.
       body: ListView(

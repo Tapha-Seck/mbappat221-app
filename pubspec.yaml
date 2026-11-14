@@ -29,12 +29,17 @@ dev_dependencies:
 
   # Règles de bonne pratique, activées dans analysis_options.yaml.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # Section propre à Flutter.
 flutter:
 
   # Ajoute la police des icônes Material (Icons.home, Icons.event...).
   uses-material-design: true
+
+  # Images embarquées dans l'application (le logo). Le / final = tout le dossier.
+  assets:
+    - assets/images/
 
   # Police Inter, fichiers dans assets/polices/ (comme des ressources dans src/main/resources).
   # « weight » indique la graisse de chaque fichier : 400 = normal (par défaut), 700 = gras, 900 = très gras.
@@ -52,3 +57,19 @@ flutter:
           weight: 800
         - asset: assets/polices/Inter-Black.ttf
           weight: 900
+
+# Icône de l'application (écran d'accueil du téléphone, onglet du navigateur).
+# Générée par : dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/icone/icone_app.png"
+  android: true
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icone/icone_adaptative.png"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/icone/icone_app.png"
+    background_color: "#FFFFFF"
+    theme_color: "#050301"

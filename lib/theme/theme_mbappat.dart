@@ -32,6 +32,17 @@ abstract final class ThemeMbappat {
       fontFamily: 'Inter',                       // déclarée dans pubspec.yaml (section fonts)
       scaffoldBackgroundColor: Couleurs.fond,    // fond crème derrière chaque écran
 
+      // La barre du haut de chaque écran : toujours blanche, même quand le contenu défile dessous
+      // (par défaut, Material 3 la teinte en beige au défilement : « scrolled under »).
+      appBarTheme: const AppBarThemeData(
+        backgroundColor: Couleurs.blanc,
+        foregroundColor: Couleurs.noir,
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
+        elevation: 0,
+        shape: Border(bottom: BorderSide(color: Couleurs.bordure)),   // fin trait de séparation
+      ),
+
       // La barre d'onglets du bas.
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Couleurs.blanc,
