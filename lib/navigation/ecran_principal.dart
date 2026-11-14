@@ -10,9 +10,13 @@ import 'package:mbappat221_app/ecrans/classement/ecran_classement.dart';
 import 'package:mbappat221_app/ecrans/galas/ecran_galas.dart';
 import 'package:mbappat221_app/ecrans/lutteurs/ecran_lutteurs.dart';
 import 'package:mbappat221_app/ecrans/plus/ecran_plus.dart';
+import 'package:mbappat221_app/services/gala_api.dart';
 
 class EcranPrincipal extends StatefulWidget {
-  const EcranPrincipal({super.key});
+  const EcranPrincipal({super.key, required this.galaApi});
+
+  /// Transmis à l'onglet Galas (injection par constructeur, de l'application vers les écrans).
+  final GalaApi galaApi;
 
   @override
   State<EcranPrincipal> createState() => _EcranPrincipalState();
@@ -22,20 +26,21 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
   int _ongletActif = 0;   // 0 = Accueil, 1 = Galas, 2 = Lutteurs, 3 = Classement, 4 = Plus
 
   /// Les 5 écrans, dans l'ordre des onglets.
-  /// « const » : ces widgets sont créés une seule fois à la compilation, jamais recréés.
-  static const List<Widget> _ecrans = [
-    EcranAccueil(),
-    EcranGalas(),
-    EcranLutteurs(),
-    EcranClassement(),
-    EcranPlus(),
+  /// « late final » : la liste est créée au premier accès (quand « widget » est disponible),
+  /// puis gardée : les écrans ne sont pas recréés à chaque changement d'onglet.
+  late final List<Widget> _ecrans = [
+    const EcranAccueil(),
+    EcranGalas(galaApi: widget.galaApi),
+    const EcranLutteurs(),
+    const EcranClassement(),
+    const EcranPlus(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       // IndexedStack empile les 5 écrans et n'affiche que celui de l'index donné.
-      // Avantage : chaque onglet garde son état (position de défilement, recherche tapée...)
+      // Avantage : chaque onglet garde son état (liste déjà chargée, position de défilement...)
       // quand on change d'onglet. Un simple « _ecrans[_ongletActif] » le perdrait.
       body: IndexedStack(index: _ongletActif, children: _ecrans),
 

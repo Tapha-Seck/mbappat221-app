@@ -20,6 +20,7 @@ dependencies:
 
   # Icônes au style iOS (classe CupertinoIcons).
   cupertino_icons: ^1.0.8
+  http: ^1.6.0
 
 # Dépendances utilisées seulement pour les tests et l'analyse (comme <scope>test</scope>).
 dev_dependencies:
