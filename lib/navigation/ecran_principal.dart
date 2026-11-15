@@ -15,7 +15,7 @@ import 'package:mbappat221_app/services/gala_api.dart';
 class EcranPrincipal extends StatefulWidget {
   const EcranPrincipal({super.key, required this.galaApi});
 
-  /// Transmis à l'onglet Galas (injection par constructeur, de l'application vers les écrans).
+  /// Transmis aux onglets Accueil et Galas (injection par constructeur, de l'application vers les écrans).
   final GalaApi galaApi;
 
   @override
@@ -29,7 +29,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
   /// « late final » : la liste est créée au premier accès (quand « widget » est disponible),
   /// puis gardée : les écrans ne sont pas recréés à chaque changement d'onglet.
   late final List<Widget> _ecrans = [
-    const EcranAccueil(),
+    EcranAccueil(galaApi: widget.galaApi),
     EcranGalas(galaApi: widget.galaApi),
     const EcranLutteurs(),
     const EcranClassement(),

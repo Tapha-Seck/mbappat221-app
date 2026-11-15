@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:mbappat221_app/ecrans/galas/carte_gala.dart';
+import 'package:mbappat221_app/ecrans/galas/ecran_fiche_gala.dart';
 import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/page_resultats.dart';
 import 'package:mbappat221_app/services/gala_api.dart';
@@ -102,7 +103,12 @@ class _ListeGalas extends StatelessWidget {
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final gala = galas[index];
-        return CarteGala(gala: gala, urlAffiche: galaApi.urlFichier(gala.afficheUrl));
+        return CarteGala(
+          gala: gala,
+          urlAffiche: galaApi.urlFichier(gala.afficheUrl),
+          // Un appui sur la carte ouvre la fiche du gala (nouvel écran par-dessus la liste).
+          surAppui: () => EcranFicheGala.ouvrir(context, gala: gala, galaApi: galaApi),
+        );
       },
     );
   }

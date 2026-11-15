@@ -1,16 +1,22 @@
 // Fichier : lib/ecrans/accueil/ecran_accueil.dart
-// Onglet « Accueil » : bandeau de bienvenue, puis les rubriques principales.
-// À l'étape F2, la carte « Prochain gala » affichera un vrai gala venu de l'API.
+// Onglet « Accueil » : bandeau de bienvenue, le VRAI prochain gala (API), puis le classement.
 //
 // Nouveau concept : découper un écran en petits widgets privés (_Bandeau, _TitreSection, _CarteRubrique).
 // C'est l'équivalent d'extraire des méthodes privées en Java pour garder build() lisible.
 
 import 'package:flutter/material.dart';
 
+import 'package:mbappat221_app/ecrans/galas/carte_gala.dart';
+import 'package:mbappat221_app/ecrans/galas/ecran_fiche_gala.dart';
+import 'package:mbappat221_app/modeles/gala.dart';
+import 'package:mbappat221_app/modeles/page_resultats.dart';
+import 'package:mbappat221_app/services/gala_api.dart';
 import 'package:mbappat221_app/theme/couleurs.dart';
 
 class EcranAccueil extends StatelessWidget {
-  const EcranAccueil({super.key});
+  const EcranAccueil({super.key, required this.galaApi});
+
+  final GalaApi galaApi;
 
   @override
   Widget build(BuildContext context) {
@@ -28,20 +34,16 @@ class EcranAccueil extends StatelessWidget {
       // ListView avec padding : tout le contenu défile si l'écran est trop petit.
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          _Bandeau(),
-          SizedBox(height: 24),
-          _TitreSection('Prochain gala'),
-          SizedBox(height: 8),
-          _CarteRubrique(
-            icone: Icons.event,
-            titre: 'Le calendrier arrive bientôt',
-            texte: 'Date, lieu, affiche et lutteurs de chaque gala annoncé.',
-          ),
-          SizedBox(height: 24),
-          _TitreSection('Classement de la saison'),
-          SizedBox(height: 8),
-          _CarteRubrique(
+        children: [
+          const _Bandeau(),
+          const SizedBox(height: 24),
+          const _TitreSection('Prochain gala'),
+          const SizedBox(height: 8),
+          _ProchainGala(galaApi: galaApi),
+          const SizedBox(height: 24),
+          const _TitreSection('Classement de la saison'),
+          const SizedBox(height: 8),
+          const _CarteRubrique(
             icone: Icons.emoji_events,
             titre: 'Le podium par catégorie',
             texte: 'Les meilleurs lutteurs de la saison, calculés selon le barème officiel.',
@@ -153,6 +155,65 @@ class _CarteRubrique extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Le prochain gala annoncé, chargé depuis l'API (le premier de GET /api/galas/a-venir).
+/// StatefulWidget : il garde le Future du chargement (comme l'écran Galas).
+class _ProchainGala extends StatefulWidget {
+  const _ProchainGala({required this.galaApi});
+
+  final GalaApi galaApi;
+
+  @override
+  State<_ProchainGala> createState() => _ProchainGalaState();
+}
+
+class _ProchainGalaState extends State<_ProchainGala> {
+  late Future<PageResultats<Gala>> _chargement;
+
+  @override
+  void initState() {
+    super.initState();
+    // taille: 1 : on ne demande QU'UN gala au serveur (réponse plus légère sur mobile).
+    _chargement = widget.galaApi.galasAVenir(taille: 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<PageResultats<Gala>>(
+      future: _chargement,
+      builder: (context, etat) {
+        if (etat.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (etat.hasError) {
+          return const _CarteRubrique(
+            icone: Icons.wifi_off,
+            titre: 'Calendrier indisponible',
+            texte: 'Impossible de charger le prochain gala. Vérifie ta connexion.',
+          );
+        }
+        final galas = etat.requireData.contenu;
+        if (galas.isEmpty) {
+          return const _CarteRubrique(
+            icone: Icons.event_busy,
+            titre: 'Aucun gala annoncé pour le moment',
+            texte: 'Les prochains galas apparaîtront ici dès leur annonce.',
+          );
+        }
+        final gala = galas.first;
+        // On réutilise la carte de l'onglet Galas : même rendu, même appui → fiche.
+        return CarteGala(
+          gala: gala,
+          urlAffiche: widget.galaApi.urlFichier(gala.afficheUrl),
+          surAppui: () => EcranFicheGala.ouvrir(context, gala: gala, galaApi: widget.galaApi),
+        );
+      },
     );
   }
 }
