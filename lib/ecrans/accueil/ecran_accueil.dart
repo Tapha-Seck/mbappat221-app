@@ -1,5 +1,5 @@
 // Fichier : lib/ecrans/accueil/ecran_accueil.dart
-// Onglet « Accueil » : bandeau de bienvenue, le VRAI prochain gala (API), puis le classement.
+// Onglet « Accueil » : bandeau de bienvenue, le prochain gala, puis le leader de chaque catégorie.
 //
 // Nouveau concept : découper un écran en petits widgets privés (_Bandeau, _TitreSection, _CarteRubrique).
 // C'est l'équivalent d'extraire des méthodes privées en Java pour garder build() lisible.
@@ -8,15 +8,26 @@ import 'package:flutter/material.dart';
 
 import 'package:mbappat221_app/ecrans/galas/carte_gala.dart';
 import 'package:mbappat221_app/ecrans/galas/ecran_fiche_gala.dart';
+import 'package:mbappat221_app/ecrans/lutteurs/ecran_fiche_lutteur.dart';
+import 'package:mbappat221_app/modeles/classement.dart';
 import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/page_resultats.dart';
+import 'package:mbappat221_app/services/classement_api.dart';
 import 'package:mbappat221_app/services/gala_api.dart';
+import 'package:mbappat221_app/services/lutteur_api.dart';
 import 'package:mbappat221_app/theme/couleurs.dart';
 
 class EcranAccueil extends StatelessWidget {
-  const EcranAccueil({super.key, required this.galaApi});
+  const EcranAccueil({
+    super.key,
+    required this.galaApi,
+    required this.classementApi,
+    required this.lutteurApi,
+  });
 
   final GalaApi galaApi;
+  final ClassementApi classementApi;
+  final LutteurApi lutteurApi;   // pour ouvrir la fiche d'un leader
 
   @override
   Widget build(BuildContext context) {
@@ -41,13 +52,9 @@ class EcranAccueil extends StatelessWidget {
           const SizedBox(height: 8),
           _ProchainGala(galaApi: galaApi),
           const SizedBox(height: 24),
-          const _TitreSection('Classement de la saison'),
+          const _TitreSection('Leaders de la saison'),
           const SizedBox(height: 8),
-          const _CarteRubrique(
-            icone: Icons.emoji_events,
-            titre: 'Le podium par catégorie',
-            texte: 'Les meilleurs lutteurs de la saison, calculés selon le barème officiel.',
-          ),
+          _LeadersSaison(classementApi: classementApi, lutteurApi: lutteurApi),
         ],
       ),
     );
@@ -214,6 +221,104 @@ class _ProchainGalaState extends State<_ProchainGala> {
           surAppui: () => EcranFicheGala.ouvrir(context, gala: gala, galaApi: widget.galaApi),
         );
       },
+    );
+  }
+}
+
+/// Le premier de chaque catégorie (podium de la saison). Un appui ouvre la fiche du lutteur.
+class _LeadersSaison extends StatefulWidget {
+  const _LeadersSaison({required this.classementApi, required this.lutteurApi});
+
+  final ClassementApi classementApi;
+  final LutteurApi lutteurApi;
+
+  @override
+  State<_LeadersSaison> createState() => _LeadersSaisonState();
+}
+
+class _LeadersSaisonState extends State<_LeadersSaison> {
+  late Future<Podium> _chargement;
+
+  @override
+  void initState() {
+    super.initState();
+    _chargement = widget.classementApi.podium();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Podium>(
+      future: _chargement,
+      builder: (context, etat) {
+        if (etat.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        // Seulement les catégories qui ont déjà un leader (au moins une finale disputée).
+        final avecLeader = etat.hasError
+            ? const <Classement>[]
+            : etat.requireData.categories.where((c) => c.leader != null).toList();
+        if (avecLeader.isEmpty) {
+          return const _CarteRubrique(
+            icone: Icons.emoji_events,
+            titre: 'Le podium par catégorie',
+            texte: 'Les meilleurs lutteurs de la saison apparaîtront ici dès les premières finales.',
+          );
+        }
+        // Material (et non Container) : les ListTile cliquables dessinent leur effet au toucher
+        // sur le Material le plus proche. Avec un Container coloré, cet effet serait caché dessous.
+        return Material(
+          color: Couleurs.blanc,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Couleurs.bordure),
+          ),
+          clipBehavior: Clip.antiAlias,   // l'effet reste à l'intérieur des coins arrondis
+          child: Column(
+            children: [
+              for (var i = 0; i < avecLeader.length; i++) ...[
+                if (i > 0) const Divider(height: 1, color: Couleurs.bordure),
+                _LigneLeader(
+                  categorie: avecLeader[i].categorieNom,
+                  leader: avecLeader[i].leader!,
+                  surAppui: () => EcranFicheLutteur.ouvrir(
+                    context,
+                    lutteurId: avecLeader[i].leader!.lutteurId,
+                    titre: avecLeader[i].leader!.nomAffiche,
+                    lutteurApi: widget.lutteurApi,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LigneLeader extends StatelessWidget {
+  const _LigneLeader({required this.categorie, required this.leader, required this.surAppui});
+
+  final String categorie;
+  final LigneClassement leader;
+  final VoidCallback surAppui;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: surAppui,
+      leading: const CircleAvatar(
+        backgroundColor: Couleurs.or,
+        foregroundColor: Couleurs.noir,
+        child: Icon(Icons.emoji_events, size: 20),
+      ),
+      title: Text(leader.nomAffiche, style: const TextStyle(fontWeight: FontWeight.w800)),
+      subtitle: Text(categorie),
+      trailing: Text('${leader.points} pts',
+          style: const TextStyle(fontWeight: FontWeight.w900, color: Couleurs.orTexte)),
     );
   }
 }

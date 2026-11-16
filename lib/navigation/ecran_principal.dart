@@ -10,13 +10,13 @@ import 'package:mbappat221_app/ecrans/classement/ecran_classement.dart';
 import 'package:mbappat221_app/ecrans/galas/ecran_galas.dart';
 import 'package:mbappat221_app/ecrans/lutteurs/ecran_lutteurs.dart';
 import 'package:mbappat221_app/ecrans/plus/ecran_plus.dart';
-import 'package:mbappat221_app/services/gala_api.dart';
+import 'package:mbappat221_app/services/services_api.dart';
 
 class EcranPrincipal extends StatefulWidget {
-  const EcranPrincipal({super.key, required this.galaApi});
+  const EcranPrincipal({super.key, required this.services});
 
-  /// Transmis aux onglets Accueil et Galas (injection par constructeur, de l'application vers les écrans).
-  final GalaApi galaApi;
+  /// Tous les services, transmis aux onglets qui en ont besoin (injection par constructeur).
+  final ServicesApi services;
 
   @override
   State<EcranPrincipal> createState() => _EcranPrincipalState();
@@ -29,10 +29,18 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
   /// « late final » : la liste est créée au premier accès (quand « widget » est disponible),
   /// puis gardée : les écrans ne sont pas recréés à chaque changement d'onglet.
   late final List<Widget> _ecrans = [
-    EcranAccueil(galaApi: widget.galaApi),
-    EcranGalas(galaApi: widget.galaApi),
-    const EcranLutteurs(),
-    const EcranClassement(),
+    EcranAccueil(
+      galaApi: widget.services.galas,
+      classementApi: widget.services.classements,
+      lutteurApi: widget.services.lutteurs,
+    ),
+    EcranGalas(galaApi: widget.services.galas),
+    EcranLutteurs(lutteurApi: widget.services.lutteurs, referentielApi: widget.services.referentiel),
+    EcranClassement(
+      classementApi: widget.services.classements,
+      referentielApi: widget.services.referentiel,
+      lutteurApi: widget.services.lutteurs,
+    ),
     const EcranPlus(),
   ];
 

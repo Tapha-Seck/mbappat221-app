@@ -1,44 +1,28 @@
 // Fichier : test/widget_test.dart
-// Tests de l'application entière : navigation par onglets, accueil, liste et fiche des galas.
+// Tests de l'application entière : navigation, accueil, galas (liste et fiche), lutteurs.
 //
 // Repères Java : testWidgets ≈ @Test, expect(x, matcher) ≈ assertThat(x, matcher),
-// group(...) ≈ une classe de test @Nested. GalaApiFactice ≈ un @Mock de GalaApi.
+// group(...) ≈ une classe de test @Nested. Les « factices » (test/factices.dart) ≈ des @Mock.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mbappat221_app/app.dart';
 import 'package:mbappat221_app/ecrans/accueil/ecran_accueil.dart';
+import 'package:mbappat221_app/ecrans/classement/ecran_classement.dart';
 import 'package:mbappat221_app/ecrans/galas/ecran_fiche_gala.dart';
 import 'package:mbappat221_app/ecrans/galas/ecran_galas.dart';
+import 'package:mbappat221_app/ecrans/lutteurs/ecran_fiche_lutteur.dart';
+import 'package:mbappat221_app/ecrans/lutteurs/ecran_lutteurs.dart';
 import 'package:mbappat221_app/modeles/animateur.dart';
+import 'package:mbappat221_app/modeles/categorie.dart';
+import 'package:mbappat221_app/modeles/classement.dart';
+import 'package:mbappat221_app/modeles/fiche_lutteur.dart';
 import 'package:mbappat221_app/modeles/gala.dart';
-import 'package:mbappat221_app/modeles/page_resultats.dart';
+import 'package:mbappat221_app/modeles/lutteur.dart';
 import 'package:mbappat221_app/services/client_api.dart';
-import 'package:mbappat221_app/services/gala_api.dart';
 
-/// Une fausse GalaApi qui répond tout de suite, sans réseau.
-/// « implements GalaApi » : en Dart, toute classe sert aussi d'interface.
-class GalaApiFactice implements GalaApi {
-  GalaApiFactice({this.galas = const [], this.erreur});
-
-  final List<Gala> galas;
-  final ApiException? erreur;
-
-  @override
-  Future<PageResultats<Gala>> galasAVenir({int page = 0, int taille = 20}) async {
-    final e = erreur;
-    if (e != null) {
-      throw e;
-    }
-    final contenu = galas.take(taille).toList();   // respecte la taille demandée (1 pour l'accueil)
-    return PageResultats(
-        contenu: contenu, page: 0, taille: taille, totalElements: galas.length, totalPages: 1);
-  }
-
-  @override
-  String? urlFichier(String? chemin) => null;   // pas d'image réseau pendant les tests
-}
+import 'factices.dart';
 
 final _galaDeThies = Gala(
   id: 1,
@@ -69,6 +53,56 @@ final _galaAnnule = Gala(
   mise: '10 bœufs',
 );
 
+const _lutteurs = [
+  LutteurListe(id: 1, nom: 'Modou Sarr', categorieId: 1, categorieNom: 'Poids Lourds',
+      ecurieNom: 'Écurie Fass'),
+  LutteurListe(id: 2, nom: 'Moussa Ndiaye', surnom: 'Lion de Fimela', categorieId: 2,
+      categorieNom: 'Poids Légers'),
+];
+
+final _ficheLion = FicheLutteur(
+  lutteur: const LutteurDetail(id: 2, nom: 'Moussa Ndiaye', surnom: 'Lion de Fimela',
+      categorieNom: 'Poids Légers', retraite: false, region: 'Fatick'),
+  photos: const [],
+  saisonLibelle: '2026-2027',
+  bilan: const BilanSaison(finalesDisputees: 2, victoires: 1, defaites: 1, points: 8,
+      totalGagne: 150000, lotsRecus: ['1 bœuf']),
+  historique: [
+    FinaleHistorique(finaleId: 9, galaNom: 'LAMB CENTRE VILLE', categorieNom: 'Poids Légers',
+        victoire: true, adversaire: 'Olympique', points: 5, date: DateTime(2027, 1, 10),
+        gainRecu: '150 000 FCFA'),
+  ],
+);
+
+const _categories = [
+  Categorie(id: 1, nom: 'Poids Lourds', ordre: 1),
+  Categorie(id: 2, nom: 'Poids Légers', ordre: 2),
+];
+
+LigneClassement _ligne(int rang, int id, String nom, int points) => LigneClassement(
+    rang: rang, lutteurId: id, nom: nom, points: points, victoires: 2, defaites: 1,
+    finales: 3, totalGagne: 300000);
+
+final _classementLourds = Classement(
+  categorieId: 1,
+  categorieNom: 'Poids Lourds',
+  saisonLibelle: '2026-2027',
+  lignes: [
+    _ligne(1, 11, 'Bombardier Junior', 15),
+    _ligne(2, 12, 'Tonnerre de Joal', 10),
+    _ligne(3, 13, 'Petit Lion', 8),
+    _ligne(4, 14, 'Roc de Sine', 5),
+  ],
+);
+
+final _ficheRoc = FicheLutteur(
+  lutteur: const LutteurDetail(id: 14, nom: 'Roc de Sine', categorieNom: 'Poids Lourds', retraite: false),
+  photos: const [],
+  saisonLibelle: '2026-2027',
+  bilan: const BilanSaison(finalesDisputees: 3, victoires: 2, defaites: 1, points: 5, totalGagne: 300000),
+  historique: const [],
+);
+
 /// Trouve un libellé DANS la barre d'onglets uniquement.
 Finder ongletNomme(String libelle) =>
     find.descendant(of: find.byType(NavigationBar), matching: find.text(libelle));
@@ -91,7 +125,7 @@ void ecranHaut(WidgetTester tester) {
 void main() {
   group('Navigation principale', () {
     testWidgets('affiche les 5 onglets et démarre sur Accueil', (tester) async {
-      await tester.pumpWidget(Mbappat221App(galaApi: GalaApiFactice()));
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices()));
 
       for (final libelle in ['Accueil', 'Galas', 'Lutteurs', 'Classement', 'Plus']) {
         expect(ongletNomme(libelle), findsOneWidget);
@@ -101,7 +135,7 @@ void main() {
     });
 
     testWidgets('un appui sur un onglet change l\'écran affiché', (tester) async {
-      await tester.pumpWidget(Mbappat221App(galaApi: GalaApiFactice()));
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices()));
 
       await tester.tap(ongletNomme('Galas'));
       await tester.pumpAndSettle();   // attend la fin des animations
@@ -113,7 +147,7 @@ void main() {
     });
 
     testWidgets('l\'onglet Plus affiche un message au toucher', (tester) async {
-      await tester.pumpWidget(Mbappat221App(galaApi: GalaApiFactice()));
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices()));
 
       await tester.tap(ongletNomme('Plus'));
       await tester.pumpAndSettle();
@@ -127,7 +161,7 @@ void main() {
   group('Accueil', () {
     testWidgets('affiche le prochain gala', (tester) async {
       await tester.pumpWidget(
-          Mbappat221App(galaApi: GalaApiFactice(galas: [_galaDeThies, _galaAnnule])));
+          Mbappat221App(services: servicesFactices(galas: [_galaDeThies, _galaAnnule])));
       await tester.pumpAndSettle();
 
       expect(texteDans(EcranAccueil, 'Grand gala de Thiès'), findsOneWidget);
@@ -135,7 +169,7 @@ void main() {
     });
 
     testWidgets('sans gala annoncé : message', (tester) async {
-      await tester.pumpWidget(Mbappat221App(galaApi: GalaApiFactice()));
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices()));
       await tester.pumpAndSettle();
 
       expect(texteDans(EcranAccueil, 'Aucun gala annoncé pour le moment'), findsOneWidget);
@@ -145,7 +179,7 @@ void main() {
   group('Onglet Galas', () {
     testWidgets('affiche les galas reçus, avec l\'étiquette des galas annulés', (tester) async {
       await tester.pumpWidget(
-          Mbappat221App(galaApi: GalaApiFactice(galas: [_galaDeThies, _galaAnnule])));
+          Mbappat221App(services: servicesFactices(galas: [_galaDeThies, _galaAnnule])));
 
       await tester.tap(ongletNomme('Galas'));
       await tester.pumpAndSettle();
@@ -159,7 +193,7 @@ void main() {
     });
 
     testWidgets('liste vide : message « Aucun gala »', (tester) async {
-      await tester.pumpWidget(Mbappat221App(galaApi: GalaApiFactice()));
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices()));
 
       await tester.tap(ongletNomme('Galas'));
       await tester.pumpAndSettle();
@@ -169,7 +203,7 @@ void main() {
 
     testWidgets('serveur injoignable : message et bouton Réessayer', (tester) async {
       await tester.pumpWidget(Mbappat221App(
-          galaApi: GalaApiFactice(erreur: const ApiException('Impossible de joindre le serveur.'))));
+          services: servicesFactices(erreurGalas: const ApiException('Impossible de joindre le serveur.'))));
 
       await tester.tap(ongletNomme('Galas'));
       await tester.pumpAndSettle();
@@ -182,7 +216,7 @@ void main() {
   group('Fiche d\'un gala', () {
     testWidgets('un appui sur la carte ouvre la fiche ; la flèche retour la ferme', (tester) async {
       ecranHaut(tester);
-      await tester.pumpWidget(Mbappat221App(galaApi: GalaApiFactice(galas: [_galaDeThies])));
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices(galas: [_galaDeThies])));
       await tester.tap(ongletNomme('Galas'));
       await tester.pumpAndSettle();
 
@@ -206,7 +240,7 @@ void main() {
 
     testWidgets('le prochain gala de l\'accueil ouvre aussi la fiche', (tester) async {
       ecranHaut(tester);
-      await tester.pumpWidget(Mbappat221App(galaApi: GalaApiFactice(galas: [_galaDeThies])));
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices(galas: [_galaDeThies])));
       await tester.pumpAndSettle();
 
       await tester.tap(texteDans(EcranAccueil, 'Grand gala de Thiès'));
@@ -219,5 +253,127 @@ void main() {
       expect(find.byType(EcranFicheGala), findsNothing);
       expect(ongletActif(tester), 0);
     });
+  });
+
+  group('Onglet Lutteurs', () {
+    Future<void> ouvrirLutteurs(WidgetTester tester) async {
+      await tester.pumpWidget(
+          Mbappat221App(services: servicesFactices(
+              lutteurs: _lutteurs, fiches: {2: _ficheLion}, categories: _categories)));
+      await tester.tap(ongletNomme('Lutteurs'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('liste les lutteurs : surnom en gros, catégorie et écurie', (tester) async {
+      await ouvrirLutteurs(tester);
+
+      expect(texteDans(EcranLutteurs, '2 lutteurs'), findsOneWidget);
+      expect(texteDans(EcranLutteurs, 'Modou Sarr'), findsOneWidget);
+      expect(texteDans(EcranLutteurs, 'Poids Lourds · Écurie Fass'), findsOneWidget);
+      expect(texteDans(EcranLutteurs, 'Lion de Fimela'), findsOneWidget);   // surnom
+      expect(texteDans(EcranLutteurs, 'Moussa Ndiaye'), findsOneWidget);    // vrai nom en dessous
+      expect(texteDans(EcranLutteurs, 'Poids Légers · Sans écurie'), findsOneWidget);
+    });
+
+    testWidgets('la recherche trouve aussi par écurie (après 400 ms sans frappe)', (tester) async {
+      await ouvrirLutteurs(tester);
+
+      await tester.enterText(
+          find.descendant(of: find.byType(EcranLutteurs), matching: find.byType(TextField)), 'fass');
+      await tester.pump(const Duration(milliseconds: 450));   // la minuterie de 400 ms se déclenche
+      await tester.pumpAndSettle();
+
+      expect(texteDans(EcranLutteurs, '1 lutteur'), findsOneWidget);
+      expect(texteDans(EcranLutteurs, 'Modou Sarr'), findsOneWidget);
+      expect(texteDans(EcranLutteurs, 'Lion de Fimela'), findsNothing);
+    });
+
+    testWidgets('le filtre par catégorie', (tester) async {
+      await ouvrirLutteurs(tester);
+
+      await tester.tap(texteDans(EcranLutteurs, 'Poids Légers'));   // la pastille du filtre
+      await tester.pumpAndSettle();
+
+      expect(texteDans(EcranLutteurs, '1 lutteur'), findsOneWidget);
+      expect(texteDans(EcranLutteurs, 'Lion de Fimela'), findsOneWidget);
+      expect(texteDans(EcranLutteurs, 'Modou Sarr'), findsNothing);
+    });
+
+    testWidgets('un appui sur un lutteur ouvre sa fiche : bilan et finales', (tester) async {
+      ecranHaut(tester);
+      await ouvrirLutteurs(tester);
+
+      await tester.tap(texteDans(EcranLutteurs, 'Lion de Fimela'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EcranFicheLutteur), findsOneWidget);
+      expect(texteDans(EcranFicheLutteur, 'Saison 2026-2027'), findsOneWidget);
+      expect(texteDans(EcranFicheLutteur, '8'), findsOneWidget);              // points
+      expect(texteDans(EcranFicheLutteur, '150 000 FCFA'), findsOneWidget);   // total gagné
+      expect(texteDans(EcranFicheLutteur, '1 bœuf'), findsOneWidget);
+      expect(texteDans(EcranFicheLutteur, 'Victoire contre Olympique'), findsOneWidget);
+      expect(texteDans(EcranFicheLutteur, '+5 pts'), findsOneWidget);
+
+      await tester.tap(texteDans(EcranFicheLutteur, 'Retour'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EcranFicheLutteur), findsNothing);
+    });
+  });
+
+  group('Onglet Classement', () {
+    Future<void> ouvrirClassement(WidgetTester tester) async {
+      ecranHaut(tester);
+      await tester.pumpWidget(Mbappat221App(services: servicesFactices(
+        categories: _categories,
+        classements: {1: _classementLourds},
+        fiches: {14: _ficheRoc},
+      )));
+      await tester.tap(ongletNomme('Classement'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('la première catégorie : podium puis les suivants', (tester) async {
+      await ouvrirClassement(tester);
+
+      expect(texteDans(EcranClassement, 'Saison 2026-2027 · Poids Lourds'), findsOneWidget);
+      expect(texteDans(EcranClassement, 'Bombardier Junior'), findsOneWidget);   // podium
+      expect(texteDans(EcranClassement, '15 pts'), findsOneWidget);
+      expect(texteDans(EcranClassement, 'Roc de Sine'), findsOneWidget);         // 4e place
+      expect(texteDans(EcranClassement, '2 V · 1 D · 300 000 FCFA'), findsOneWidget);
+    });
+
+    testWidgets('une catégorie sans finale : message', (tester) async {
+      await ouvrirClassement(tester);
+
+      await tester.tap(texteDans(EcranClassement, 'Poids Légers'));
+      await tester.pumpAndSettle();
+
+      expect(texteDans(EcranClassement, 'Pas encore de classement'), findsOneWidget);
+    });
+
+    testWidgets('un appui sur un lutteur ouvre sa fiche', (tester) async {
+      await ouvrirClassement(tester);
+
+      await tester.tap(texteDans(EcranClassement, 'Roc de Sine'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EcranFicheLutteur), findsOneWidget);
+    });
+  });
+
+  testWidgets('Accueil : le leader de chaque catégorie', (tester) async {
+    await tester.pumpWidget(Mbappat221App(services: servicesFactices(
+      podium: Podium(saisonLibelle: '2026-2027', categories: [
+        _classementLourds,
+        const Classement(categorieId: 2, categorieNom: 'Poids Légers', saisonLibelle: '2026-2027',
+            lignes: []),
+      ]),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(texteDans(EcranAccueil, 'Leaders de la saison'), findsOneWidget);
+    expect(texteDans(EcranAccueil, 'Bombardier Junior'), findsOneWidget);
+    expect(texteDans(EcranAccueil, '15 pts'), findsOneWidget);
+    expect(texteDans(EcranAccueil, 'Poids Légers'), findsNothing);   // pas encore de leader
   });
 }

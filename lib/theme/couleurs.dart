@@ -16,5 +16,6 @@ abstract final class Couleurs {
   static const blanc = Color(0xFFFFFFFF);
   static const grisTexte = Color(0xFF6B6760); // textes secondaires
   static const bordure = Color(0xFFE8E2D4);   // contour des cartes
-  static const rouge = Color(0xFFB3261E);     // gala annulé, erreurs
+  static const rouge = Color(0xFFB3261E);     // gala annulé, erreurs, défaites
+  static const vert = Color(0xFF1E7A46);      // victoires
 }

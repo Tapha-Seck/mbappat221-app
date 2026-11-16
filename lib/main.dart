@@ -6,12 +6,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:mbappat221_app/app.dart';
-import 'package:mbappat221_app/services/client_api.dart';
-import 'package:mbappat221_app/services/gala_api.dart';
+import 'package:mbappat221_app/services/services_api.dart';
 
 void main() {
-  // Un seul client HTTP pour toute l'application : il réutilise les connexions (plus rapide).
-  final clientApi = ClientApi();
-
-  runApp(Mbappat221App(galaApi: GalaApi(clientApi)));
+  runApp(Mbappat221App(services: ServicesApi.reels()));
 }

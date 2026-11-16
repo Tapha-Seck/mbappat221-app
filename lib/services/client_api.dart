@@ -40,9 +40,20 @@ class ClientApi {
   /// Au-delà, on considère que le serveur ne répond pas (connexion mobile faible).
   static const _delaiMaximal = Duration(seconds: 15);
 
-  /// GET [chemin] et renvoie le JSON reçu sous forme de Map (l'équivalent d'un objet JSON).
+  /// GET [chemin] quand la réponse est un objet JSON { ... } : renvoie une Map.
   /// Lance une [ApiException] si le serveur est injoignable ou répond une erreur.
   Future<Map<String, dynamic>> lireJson(String chemin, {Map<String, String>? parametres}) async {
+    return await _lire(chemin, parametres) as Map<String, dynamic>;
+  }
+
+  /// GET [chemin] quand la réponse est une liste JSON [ ... ] (ex. /api/categories).
+  Future<List<dynamic>> lireJsonListe(String chemin, {Map<String, String>? parametres}) async {
+    return await _lire(chemin, parametres) as List<dynamic>;
+  }
+
+  /// L'appel commun aux deux méthodes ci-dessus. « Object? » : n'importe quel résultat JSON
+  /// (Map, List, texte, nombre...) ; chaque méthode publique le « caste » vers le bon type.
+  Future<Object?> _lire(String chemin, Map<String, String>? parametres) async {
     final uri = Uri.parse('$urlBase$chemin').replace(queryParameters: parametres);
 
     // « final http.Response reponse; » sans valeur : Dart vérifie qu'elle sera affectée
@@ -65,7 +76,7 @@ class ClientApi {
 
     // bodyBytes + utf8.decode : on décode nous-mêmes en UTF-8. Sinon, si le serveur
     // n'indique pas le jeu de caractères, « Thiès » pourrait s'afficher « ThiÃ¨s ».
-    return jsonDecode(utf8.decode(reponse.bodyBytes)) as Map<String, dynamic>;
+    return jsonDecode(utf8.decode(reponse.bodyBytes));
   }
 
   /// Les photos et affiches ont une adresse relative (« /fichiers/galas/3/x.jpg ») :
