@@ -41,7 +41,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
       referentielApi: widget.services.referentiel,
       lutteurApi: widget.services.lutteurs,
     ),
-    const EcranPlus(),
+    EcranPlus(animateurApi: widget.services.animateurs),
   ];
 
   @override

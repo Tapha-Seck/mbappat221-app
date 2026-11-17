@@ -4,12 +4,14 @@
 //
 // « implements X » : en Dart, toute classe sert aussi d'interface ; le faux remplace le vrai.
 
+import 'package:mbappat221_app/modeles/animateur.dart';
 import 'package:mbappat221_app/modeles/categorie.dart';
 import 'package:mbappat221_app/modeles/classement.dart';
 import 'package:mbappat221_app/modeles/fiche_lutteur.dart';
 import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/lutteur.dart';
 import 'package:mbappat221_app/modeles/page_resultats.dart';
+import 'package:mbappat221_app/services/animateur_api.dart';
 import 'package:mbappat221_app/services/classement_api.dart';
 import 'package:mbappat221_app/services/client_api.dart';
 import 'package:mbappat221_app/services/gala_api.dart';
@@ -26,11 +28,14 @@ ServicesApi servicesFactices({
   List<Categorie> categories = const [],
   Map<int, Classement> classements = const {},
   Podium? podium,
+  List<AnimateurDetail> animateurs = const [],
+  Map<int, ProfilAnimateur> profils = const {},
 }) {
   return ServicesApi(
     galas: GalaApiFactice(galas: galas, erreur: erreurGalas),
     lutteurs: LutteurApiFactice(lutteurs: lutteurs, fiches: fiches),
     classements: ClassementApiFactice(classements: classements, podiumSaison: podium),
+    animateurs: AnimateurApiFactice(animateurs: animateurs, profils: profils),
     referentiel: ReferentielApiFactice(liste: categories),
   );
 }
@@ -119,4 +124,27 @@ class ClassementApiFactice implements ClassementApi {
   @override
   Future<Podium> podium() async =>
       podiumSaison ?? const Podium(saisonLibelle: '2026-2027', categories: []);
+}
+
+class AnimateurApiFactice implements AnimateurApi {
+  AnimateurApiFactice({this.animateurs = const [], this.profils = const {}});
+
+  final List<AnimateurDetail> animateurs;
+  final Map<int, ProfilAnimateur> profils;   // profil par identifiant d'animateur
+
+  @override
+  Future<List<AnimateurDetail>> lister({RoleAnimateur? role}) async =>
+      animateurs.where((a) => role == null || a.role == role).toList();
+
+  @override
+  Future<ProfilAnimateur> profil(int animateurId) async {
+    final profil = profils[animateurId];
+    if (profil == null) {
+      throw const ApiException('Animateur introuvable');
+    }
+    return profil;
+  }
+
+  @override
+  String? urlFichier(String? chemin) => null;
 }

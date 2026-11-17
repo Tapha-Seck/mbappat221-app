@@ -2,15 +2,11 @@
 // La fiche d'un lutteur : ses photos (on les fait glisser), son profil, son bilan de la saison
 // et l'historique de ses finales.
 //
-// Nouveaux concepts :
-//  - PageView      : des pages qu'on fait glisser du doigt (ici, la galerie de photos).
-//  - AnimatedContainer : un conteneur qui s'anime tout seul quand ses dimensions changent
-//                        (les petits points sous la galerie).
-//  - Wrap + Expanded en Row : une grille simple de chiffres, sans GridView.
+// La galerie de photos est dans lib/widgets/galerie_photos.dart (partagée avec les animateurs).
+// Nouveau concept ici : Expanded dans des Row, pour une grille simple de chiffres, sans GridView.
 
 import 'package:flutter/material.dart';
 
-import 'package:mbappat221_app/ecrans/galas/ecran_affiche.dart';
 import 'package:mbappat221_app/ecrans/galas/elements_gala.dart';
 import 'package:mbappat221_app/modeles/fiche_lutteur.dart';
 import 'package:mbappat221_app/outils/dates_fr.dart';
@@ -18,6 +14,7 @@ import 'package:mbappat221_app/outils/montants_fr.dart';
 import 'package:mbappat221_app/services/lutteur_api.dart';
 import 'package:mbappat221_app/theme/couleurs.dart';
 import 'package:mbappat221_app/widgets/avatar_photo.dart';
+import 'package:mbappat221_app/widgets/galerie_photos.dart';
 
 class EcranFicheLutteur extends StatefulWidget {
   const EcranFicheLutteur({
@@ -114,7 +111,7 @@ class _ContenuFiche extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       children: [
         if (photos.isNotEmpty)
-          _Galerie(photos: photos, titre: lutteur.nomAffiche, lutteurId: lutteur.id)
+          GaleriePhotos(photos: photos, titre: lutteur.nomAffiche, prefixeHero: 'photo-lutteur-${lutteur.id}')
         else
           Center(
             child: AvatarPhoto(
@@ -186,83 +183,6 @@ class _ContenuFiche extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-      ],
-    );
-  }
-}
-
-/// Les photos du lutteur : on les fait glisser du doigt ; un appui l'ouvre en plein écran (zoom).
-/// StatefulWidget : il retient la photo affichée, pour allumer le bon petit point.
-class _Galerie extends StatefulWidget {
-  const _Galerie({required this.photos, required this.titre, required this.lutteurId});
-
-  final List<String> photos;
-  final String titre;
-  final int lutteurId;
-
-  @override
-  State<_Galerie> createState() => _GalerieState();
-}
-
-class _GalerieState extends State<_Galerie> {
-  int _photoActive = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            height: 340,
-            color: Couleurs.noir,
-            // PageView.builder : une page par photo, construite seulement quand elle apparaît.
-            child: PageView.builder(
-              itemCount: widget.photos.length,
-              onPageChanged: (index) => setState(() => _photoActive = index),
-              itemBuilder: (context, index) {
-                final url = widget.photos[index];
-                final tag = 'photo-lutteur-${widget.lutteurId}-$index';
-                return GestureDetector(
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (context) => EcranAffiche(url: url, titre: widget.titre, tagHero: tag),
-                  )),
-                  child: Hero(
-                    tag: tag,
-                    child: Image.network(
-                      url,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (context, erreur, pile) => const Center(
-                        child: Icon(Icons.broken_image_outlined, color: Couleurs.blanc, size: 48),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        if (widget.photos.length > 1) ...[
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < widget.photos.length; i++)
-              // Le point actif s'allonge en douceur (200 ms) : AnimatedContainer anime le changement.
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: i == _photoActive ? 22 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: i == _photoActive ? Couleurs.or : Couleurs.bordure,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-            ],
-          ),
-        ],
       ],
     );
   }

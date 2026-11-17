@@ -14,6 +14,9 @@ import 'package:mbappat221_app/ecrans/galas/ecran_fiche_gala.dart';
 import 'package:mbappat221_app/ecrans/galas/ecran_galas.dart';
 import 'package:mbappat221_app/ecrans/lutteurs/ecran_fiche_lutteur.dart';
 import 'package:mbappat221_app/ecrans/lutteurs/ecran_lutteurs.dart';
+import 'package:mbappat221_app/ecrans/plus/ecran_a_propos.dart';
+import 'package:mbappat221_app/ecrans/plus/ecran_animateurs.dart';
+import 'package:mbappat221_app/ecrans/plus/ecran_profil_animateur.dart';
 import 'package:mbappat221_app/modeles/animateur.dart';
 import 'package:mbappat221_app/modeles/categorie.dart';
 import 'package:mbappat221_app/modeles/classement.dart';
@@ -102,6 +105,21 @@ final _ficheRoc = FicheLutteur(
   bilan: const BilanSaison(finalesDisputees: 3, victoires: 2, defaites: 1, points: 5, totalGagne: 300000),
   historique: const [],
 );
+
+const _diva = AnimateurDetail(id: 3, nom: 'Ndèye Fatou', surnom: 'La Diva', role: RoleAnimateur.cantatrice,
+    region: 'Fatick', telephone: '+221 77 123 45 67', biographie: 'Voix des arènes du Sine.');
+const _griot = AnimateurDetail(id: 4, nom: 'Mor Ngom', role: RoleAnimateur.griot);   // pas de téléphone
+const _tvTv = AnimateurDetail(id: 5, nom: 'Lamb Simple TV', role: RoleAnimateur.tv, region: 'Dakar',
+    youtubeUrl: 'https://www.youtube.com/@LambSimpleTV');
+
+final _profils = {
+  3: ProfilAnimateur(animateur: _diva, galas: [
+    GalaAnime(id: 1, nom: 'LAMB CENTRE VILLE', dateDebut: DateTime(2027, 1, 8), dateFin: DateTime(2027, 1, 11),
+        lieu: 'Fimela', region: 'Fatick', statut: StatutGala.annonce),
+  ]),
+  4: const ProfilAnimateur(animateur: _griot, galas: []),
+  5: const ProfilAnimateur(animateur: _tvTv, galas: []),
+};
 
 /// Trouve un libellé DANS la barre d'onglets uniquement.
 Finder ongletNomme(String libelle) =>
@@ -375,5 +393,90 @@ void main() {
     expect(texteDans(EcranAccueil, 'Bombardier Junior'), findsOneWidget);
     expect(texteDans(EcranAccueil, '15 pts'), findsOneWidget);
     expect(texteDans(EcranAccueil, 'Poids Légers'), findsNothing);   // pas encore de leader
+  });
+
+  group('Onglet Plus : animateurs et Tv Tv', () {
+    Future<void> ouvrirAnimateurs(WidgetTester tester) async {
+      ecranHaut(tester);
+      await tester.pumpWidget(Mbappat221App(
+          services: servicesFactices(animateurs: const [_diva, _griot, _tvTv], profils: _profils)));
+      await tester.tap(ongletNomme('Plus'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Animateurs et Tv Tv'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('la liste, puis le filtre Griots', (tester) async {
+      await ouvrirAnimateurs(tester);
+
+      expect(texteDans(EcranAnimateurs, 'La Diva'), findsOneWidget);
+      expect(texteDans(EcranAnimateurs, 'Cantatrice · Fatick'), findsOneWidget);
+      expect(texteDans(EcranAnimateurs, 'Mor Ngom'), findsOneWidget);
+
+      await tester.tap(texteDans(EcranAnimateurs, 'Griots'));
+      await tester.pumpAndSettle();
+
+      expect(texteDans(EcranAnimateurs, 'La Diva'), findsNothing);
+      expect(texteDans(EcranAnimateurs, 'Mor Ngom'), findsOneWidget);
+    });
+
+    testWidgets('profil avec accord : numéro, Appeler, WhatsApp et galas', (tester) async {
+      await ouvrirAnimateurs(tester);
+
+      await tester.tap(texteDans(EcranAnimateurs, 'La Diva'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EcranProfilAnimateur), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'Réservation'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, '77 123 45 67'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'Appeler'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'WhatsApp'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'Voix des arènes du Sine.'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'LAMB CENTRE VILLE'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'À venir'), findsOneWidget);
+    });
+
+    testWidgets('profil sans accord : aucun numéro affiché', (tester) async {
+      await ouvrirAnimateurs(tester);
+
+      await tester.tap(texteDans(EcranAnimateurs, 'Mor Ngom'));
+      await tester.pumpAndSettle();
+
+      expect(texteDans(EcranProfilAnimateur, 'Réservation'), findsNothing);
+      expect(texteDans(EcranProfilAnimateur, 'Appeler'), findsNothing);
+      expect(texteDans(EcranProfilAnimateur, 'Aucun gala pour le moment.'), findsOneWidget);
+    });
+
+    testWidgets('Tv Tv : filtre, puis profil avec Voir la chaîne et S\'abonner', (tester) async {
+      await ouvrirAnimateurs(tester);
+
+      await tester.tap(texteDans(EcranAnimateurs, 'Tv Tv'));   // la pastille du filtre
+      await tester.pumpAndSettle();
+      expect(texteDans(EcranAnimateurs, 'La Diva'), findsNothing);
+      expect(texteDans(EcranAnimateurs, 'Tv Tv · Dakar'), findsOneWidget);
+
+      await tester.tap(texteDans(EcranAnimateurs, 'Lamb Simple TV'));
+      await tester.pumpAndSettle();
+
+      expect(texteDans(EcranProfilAnimateur, 'Chaîne YouTube'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'Voir la chaîne'), findsOneWidget);
+      expect(texteDans(EcranProfilAnimateur, 'S\'abonner'), findsOneWidget);
+      expect(find.textContaining('Galas animés'), findsNothing);   // une Tv Tv n'anime pas les galas
+    });
+  });
+
+  testWidgets('Plus : la page À propos', (tester) async {
+    ecranHaut(tester);   // la page est longue : tout doit tenir à l'écran pour être trouvé
+    await tester.pumpWidget(Mbappat221App(services: servicesFactices()));
+    await tester.tap(ongletNomme('Plus'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('À propos de Mbappat 221'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EcranAPropos), findsOneWidget);
+    expect(texteDans(EcranAPropos, 'Les promoteurs'), findsOneWidget);
+    expect(texteDans(EcranAPropos, 'La billetterie'), findsOneWidget);
+    expect(texteDans(EcranAPropos, 'Version ${EcranAPropos.version}'), findsOneWidget);
   });
 }
