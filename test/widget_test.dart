@@ -25,6 +25,7 @@ import 'package:mbappat221_app/modeles/classement.dart';
 import 'package:mbappat221_app/modeles/fiche_lutteur.dart';
 import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/lutteur.dart';
+import 'package:mbappat221_app/modeles/resultats_gala.dart';
 import 'package:mbappat221_app/services/client_api.dart';
 
 import 'factices.dart';
@@ -56,6 +57,39 @@ final _galaAnnule = Gala(
   region: 'Fatick',
   statut: StatutGala.annule,
   mise: '10 bœufs',
+);
+
+/// Un gala terminé : la finale des Poids Lourds est saisie, pas celle des Poids Légers.
+final _galaTermine = Gala(
+  id: 5,
+  nom: 'Gala de Mbour',
+  dateDebut: DateTime(2026, 11, 14),
+  dateFin: DateTime(2026, 11, 15),
+  lieu: 'Arène de Mbour',
+  region: 'Thiès',
+  statut: StatutGala.termine,
+  mise: '2 000 000 FCFA',
+  drapeaux: const [
+    DrapeauCalendrier(categorieNom: 'Poids Légers', categorieOrdre: 3),
+    DrapeauCalendrier(categorieNom: 'Poids Lourds', categorieOrdre: 4),
+  ],
+);
+
+const _resultatsMbour = ResultatsGala(
+  pointsVainqueur: 30,
+  pointsPerdant: 12,
+  categories: [
+    CategorieGala(drapeau: DrapeauCalendrier(categorieNom: 'Poids Légers', categorieOrdre: 3)),
+    CategorieGala(
+      drapeau: DrapeauCalendrier(categorieNom: 'Poids Lourds', categorieOrdre: 4),
+      finale: ResultatFinale(
+        vainqueur: Finaliste(id: 2, nom: 'Moussa Ndiaye', surnom: 'Lion de Fimela'),
+        gainVainqueur: '700 000 FCFA + 1 cheval',
+        perdant: Finaliste(id: 1, nom: 'Modou Sarr'),
+        gainPerdant: '—',
+      ),
+    ),
+  ],
 );
 
 const _lutteurs = [
@@ -568,6 +602,50 @@ void main() {
       await rechercher(tester, 'zzz');
 
       expect(texteDans(EcranRecherche, 'Aucun résultat pour « zzz »'), findsOneWidget);
+    });
+  });
+
+  group('Résultats des galas', () {
+    testWidgets('l\'onglet « Résultats » liste les galas terminés', (tester) async {
+      await tester.pumpWidget(Mbappat221App(
+          services: servicesFactices(galas: [_galaDeThies], galasTermines: [_galaTermine])));
+      await tester.tap(ongletNomme('Galas'));
+      await tester.pumpAndSettle();
+      expect(texteDans(EcranGalas, 'Gala de Mbour'), findsNothing);   // pas dans « À venir »
+
+      await tester.tap(find.widgetWithText(Tab, 'Résultats'));
+      await tester.pumpAndSettle();   // attend la fin du glissement vers l'onglet
+
+      expect(texteDans(EcranGalas, 'Gala de Mbour'), findsOneWidget);
+    });
+
+    testWidgets('la fiche d\'un gala terminé affiche vainqueur, perdant, gains et points', (tester) async {
+      ecranHaut(tester);
+      await tester.pumpWidget(Mbappat221App(
+        services: servicesFactices(
+            galasTermines: [_galaTermine], resultats: {5: _resultatsMbour},
+            lutteurs: _lutteurs, fiches: {2: _ficheLion}),
+      ));
+      await tester.tap(ongletNomme('Galas'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(Tab, 'Résultats'));
+      await tester.pumpAndSettle();
+      await tester.tap(texteDans(EcranGalas, 'Gala de Mbour'));
+      await tester.pumpAndSettle();
+
+      expect(texteDans(EcranFicheGala, 'Résultats'), findsOneWidget);
+      expect(texteDans(EcranFicheGala, 'Lion de Fimela'), findsOneWidget);
+      expect(texteDans(EcranFicheGala, 'Vainqueur · 700 000 FCFA + 1 cheval'), findsOneWidget);
+      expect(texteDans(EcranFicheGala, '+30 pts'), findsOneWidget);
+      expect(texteDans(EcranFicheGala, 'Modou Sarr'), findsOneWidget);
+      expect(texteDans(EcranFicheGala, 'Finaliste'), findsOneWidget);   // « — » : pas de gain affiché
+      expect(texteDans(EcranFicheGala, '+12 pts'), findsOneWidget);
+      expect(texteDans(EcranFicheGala, 'Résultat pas encore saisi'), findsOneWidget);   // Poids Légers
+
+      // Un appui sur le vainqueur ouvre sa fiche.
+      await tester.tap(texteDans(EcranFicheGala, 'Lion de Fimela'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EcranFicheLutteur), findsOneWidget);
     });
   });
 }

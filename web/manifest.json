@@ -3,7 +3,7 @@
     "short_name": "mbappat221_app",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FFFFFF",
+    "background_color": "#050301",
     "theme_color": "#050301",
     "description": "A new Flutter project.",
     "orientation": "portrait-primary",

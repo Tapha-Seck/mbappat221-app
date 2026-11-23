@@ -37,7 +37,7 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
       // La loupe ouvre la recherche générale, qui reçoit TOUS les services.
       surRecherche: () => EcranRecherche.ouvrir(context, widget.services),
     ),
-    EcranGalas(galaApi: widget.services.galas),
+    EcranGalas(galaApi: widget.services.galas, lutteurApi: widget.services.lutteurs),
     EcranLutteurs(lutteurApi: widget.services.lutteurs, referentielApi: widget.services.referentiel),
     EcranClassement(
       classementApi: widget.services.classements,

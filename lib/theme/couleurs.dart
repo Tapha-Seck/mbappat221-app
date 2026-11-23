@@ -8,8 +8,8 @@
 import 'package:flutter/material.dart';
 
 abstract final class Couleurs {
-  /// Format 0xAARRGGBB : FF = totalement opaque, puis le code hexadécimal habituel (#FAB724).
-  static const or = Color(0xFFFAB724);       // jaune or du logo
+  /// Format 0xAARRGGBB : FF = totalement opaque, puis le code hexadécimal habituel (#D08604).
+  static const or = Color(0xFFD08604);       // or du pavé « 221 » du logo
   static const noir = Color(0xFF050301);     // noir du logo
   static const orTexte = Color(0xFF8A6100);  // or foncé, lisible sur fond blanc
   static const fond = Color(0xFFF6F3EC);     // fond crème des écrans

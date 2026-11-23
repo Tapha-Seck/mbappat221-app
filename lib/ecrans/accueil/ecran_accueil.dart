@@ -40,22 +40,26 @@ class EcranAccueil extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 64,
-        // « leading » : la zone à GAUCHE du titre (là où se met d'habitude la flèche de retour).
-        // Pas de fonction de recherche fournie (null) : pas de loupe.
-        leading: surRecherche == null
-            ? null
-            : IconButton(
-          tooltip: 'Rechercher',
-          icon: const Icon(Icons.search, size: 28),
-          onPressed: surRecherche,
-        ),
-        // Le logo à la place du titre texte. Image.asset lit une image EMBARQUÉE dans l'application
-        // (déclarée dans pubspec.yaml, section assets), comme une ressource de src/main/resources.
+        // Le logo à GAUCHE, à la place du titre texte. Image.asset lit une image EMBARQUÉE dans
+        // l'application (déclarée dans pubspec.yaml, section assets), comme une ressource de src/main/resources.
         title: Image.asset(
           'assets/images/logo_mbappat221.png',
           height: 46,
           semanticLabel: 'Mbappat 221',   // lu à voix haute par les lecteurs d'écran (accessibilité)
         ),
+        // « actions » : la zone tout à DROITE de la barre (une liste de widgets, souvent des icônes).
+        // La loupe y est posée. Pas de fonction de recherche fournie (null) : pas de loupe.
+        actions: [
+          if (surRecherche != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                tooltip: 'Rechercher',
+                icon: const Icon(Icons.search, size: 28),
+                onPressed: surRecherche,
+              ),
+            ),
+        ],
       ),
       // ListView avec padding : tout le contenu défile si l'écran est trop petit.
       body: ListView(
@@ -65,7 +69,7 @@ class EcranAccueil extends StatelessWidget {
           const SizedBox(height: 24),
           const _TitreSection('Prochain gala'),
           const SizedBox(height: 8),
-          _ProchainGala(galaApi: galaApi),
+          _ProchainGala(galaApi: galaApi, lutteurApi: lutteurApi),
           const SizedBox(height: 24),
           const _TitreSection('Leaders de la saison'),
           const SizedBox(height: 8),
@@ -184,9 +188,10 @@ class _CarteRubrique extends StatelessWidget {
 /// Le prochain gala annoncé, chargé depuis l'API (le premier de GET /api/galas/a-venir).
 /// StatefulWidget : il garde le Future du chargement (comme l'écran Galas).
 class _ProchainGala extends StatefulWidget {
-  const _ProchainGala({required this.galaApi});
+  const _ProchainGala({required this.galaApi, required this.lutteurApi});
 
   final GalaApi galaApi;
+  final LutteurApi lutteurApi;   // transmis à la fiche du gala (fiches des finalistes)
 
   @override
   State<_ProchainGala> createState() => _ProchainGalaState();
@@ -233,7 +238,8 @@ class _ProchainGalaState extends State<_ProchainGala> {
         return CarteGala(
           gala: gala,
           urlAffiche: widget.galaApi.urlFichier(gala.afficheUrl),
-          surAppui: () => EcranFicheGala.ouvrir(context, gala: gala, galaApi: widget.galaApi),
+          surAppui: () => EcranFicheGala.ouvrir(context,
+              gala: gala, galaApi: widget.galaApi, lutteurApi: widget.lutteurApi),
         );
       },
     );

@@ -21,8 +21,6 @@ dependencies:
   # Icônes au style iOS (classe CupertinoIcons).
   cupertino_icons: ^1.0.8
   http: ^1.6.0
-  url_launcher: ^6.3.3
-  shared_preferences: ^2.5.6
 
 # Dépendances utilisées seulement pour les tests et l'analyse (comme <scope>test</scope>).
 dev_dependencies:
@@ -67,12 +65,12 @@ flutter_launcher_icons:
   image_path: "assets/icone/icone_app.png"
   android: true
   min_sdk_android: 21
-  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_background: "#050301"   # fond noir du logo derrière le pavé « 221 »
   adaptive_icon_foreground: "assets/icone/icone_adaptative.png"
   ios: true
   remove_alpha_ios: true
   web:
     generate: true
     image_path: "assets/icone/icone_app.png"
-    background_color: "#FFFFFF"
+    background_color: "#050301"
     theme_color: "#050301"

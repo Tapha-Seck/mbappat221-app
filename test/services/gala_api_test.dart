@@ -88,4 +88,55 @@ void main() {
     final api = GalaApi(ClientApi(client: MockClient((_) async => http.Response('', 200))));
     expect(api.urlFichier(null), isNull);
   });
+
+  test('galas terminés : la bonne adresse', () async {
+    final faux = MockClient((requete) async {
+      expect(requete.url.toString(), 'http://test/api/galas/resultats?page=0&taille=20');
+      return http.Response.bytes(utf8.encode(_jsonCalendrier), 200,
+          headers: {'content-type': 'application/json'});
+    });
+    final api = GalaApi(ClientApi(client: faux, urlBase: 'http://test'));
+
+    final page = await api.galasTermines();
+
+    expect(page.contenu.single.nom, 'Grand gala de Thiès');
+  });
+
+  test('résultats d\'un gala : points, finale saisie ou non', () async {
+    // Extrait de GET /api/galas/7 (GalaPublicDto) : seuls les champs lus par ResultatsGala comptent.
+    const json = r'''
+    {
+      "id": 7, "nom": "Grand gala de Thiès", "statut": "TERMINE",
+      "pointsVainqueur": 30, "pointsPerdant": 12,
+      "categories": [
+        {"categorieNom": "Poids légers", "categorieOrdre": 3, "date": null, "heure": null,
+         "montantAnnonce": null, "finale": null},
+        {"categorieNom": "Poids lourds", "categorieOrdre": 4, "date": "2026-11-22", "heure": "17:00:00",
+         "montantAnnonce": 1000000,
+         "finale": {
+           "vainqueur": {"id": 2, "nom": "Moussa Ndiaye", "surnom": "Lion de Fimela"},
+           "gainVainqueur": "700 000 FCFA + 1 cheval",
+           "perdant": {"id": 1, "nom": "Modou Sarr", "surnom": null},
+           "gainPerdant": "—"
+         }}
+      ]
+    }
+    ''';
+    final faux = MockClient((requete) async {
+      expect(requete.url.toString(), 'http://test/api/galas/7');
+      return http.Response.bytes(utf8.encode(json), 200, headers: {'content-type': 'application/json'});
+    });
+    final api = GalaApi(ClientApi(client: faux, urlBase: 'http://test'));
+
+    final resultats = await api.resultats(7);
+
+    expect(resultats.pointsVainqueur, 30);
+    expect(resultats.aDesResultats, isTrue);
+    expect(resultats.categories.first.finale, isNull);
+    final finale = resultats.categories.last.finale!;   // « ! » : on affirme qu'il n'est pas null
+    expect(finale.vainqueur.nomAffiche, 'Lion de Fimela');
+    expect(finale.perdant.nomAffiche, 'Modou Sarr');
+    expect(finale.gainVainqueur, '700 000 FCFA + 1 cheval');
+    expect(resultats.categories.last.drapeau.heureCourte, '17:00');
+  });
 }

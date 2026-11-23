@@ -12,6 +12,7 @@ import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/lutteur.dart';
 import 'package:mbappat221_app/modeles/page_resultats.dart';
 import 'package:mbappat221_app/modeles/recherche.dart';
+import 'package:mbappat221_app/modeles/resultats_gala.dart';
 import 'package:mbappat221_app/services/animateur_api.dart';
 import 'package:mbappat221_app/services/classement_api.dart';
 import 'package:mbappat221_app/services/client_api.dart';
@@ -25,6 +26,8 @@ import 'package:mbappat221_app/services/services_api.dart';
 ServicesApi servicesFactices({
   List<Gala> galas = const [],
   ApiException? erreurGalas,
+  List<Gala> galasTermines = const [],
+  Map<int, ResultatsGala> resultats = const {},
   List<LutteurListe> lutteurs = const [],
   Map<int, FicheLutteur> fiches = const {},
   List<Categorie> categories = const [],
@@ -34,7 +37,7 @@ ServicesApi servicesFactices({
   Map<int, ProfilAnimateur> profils = const {},
 }) {
   return ServicesApi(
-    galas: GalaApiFactice(galas: galas, erreur: erreurGalas),
+    galas: GalaApiFactice(galas: galas, erreur: erreurGalas, termines: galasTermines, resultatsParGala: resultats),
     lutteurs: LutteurApiFactice(lutteurs: lutteurs, fiches: fiches),
     classements: ClassementApiFactice(classements: classements, podiumSaison: podium),
     animateurs: AnimateurApiFactice(animateurs: animateurs, profils: profils),
@@ -44,10 +47,35 @@ ServicesApi servicesFactices({
 }
 
 class GalaApiFactice implements GalaApi {
-  GalaApiFactice({this.galas = const [], this.erreur});
+  GalaApiFactice({this.galas = const [], this.erreur, this.termines = const [], this.resultatsParGala = const {}});
 
   final List<Gala> galas;
   final ApiException? erreur;
+  final List<Gala> termines;                        // onglet « Résultats »
+  final Map<int, ResultatsGala> resultatsParGala;   // galaId → résultats des finales
+
+  @override
+  Future<PageResultats<Gala>> galasTermines({int page = 0, int taille = 20}) async {
+    final e = erreur;
+    if (e != null) {
+      throw e;
+    }
+    return PageResultats(
+        contenu: termines, page: 0, taille: taille, totalElements: termines.length, totalPages: 1);
+  }
+
+  /// Sans résultats prévus pour ce gala : ses catégories, sans aucune finale saisie.
+  @override
+  Future<ResultatsGala> resultats(int galaId) async {
+    final prevus = resultatsParGala[galaId];
+    if (prevus != null) {
+      return prevus;
+    }
+    final gala = [...galas, ...termines].where((g) => g.id == galaId).firstOrNull;
+    return ResultatsGala(
+      categories: [for (final d in gala?.drapeaux ?? const <DrapeauCalendrier>[]) CategorieGala(drapeau: d)],
+    );
+  }
 
   @override
   Future<PageResultats<Gala>> galasAVenir({int page = 0, int taille = 20}) async {

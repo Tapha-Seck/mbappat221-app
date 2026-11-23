@@ -205,7 +205,8 @@ class _EcranRechercheState extends State<EcranRecherche> {
                   image: _DateGala(gala: gala),
                   titre: gala.nom,
                   sousTitre: _sousTitreGala(gala),
-                  surAppui: () => EcranFicheGala.ouvrir(context, gala: gala, galaApi: services.galas),
+                  surAppui: () => EcranFicheGala.ouvrir(context,
+                      gala: gala, galaApi: services.galas, lutteurApi: services.lutteurs),
                 ),
             ],
             if (resultat.animateurs.contenu.isNotEmpty) ...[

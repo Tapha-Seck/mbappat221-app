@@ -1,11 +1,17 @@
 // Fichier : lib/ecrans/galas/ecran_galas.dart
-// Onglet « Galas » : la liste des galas à venir, chargée depuis l'API Spring Boot.
+// Onglet « Galas » : deux sous-onglets, « À venir » (le calendrier) et « Résultats » (les galas terminés).
 //
-// Nouveaux concepts :
+// Concepts déjà vus :
 //  - initState()     : appelé UNE fois à la création de l'écran (≈ @PostConstruct).
 //  - FutureBuilder   : se redessine selon l'état d'un Future : en cours, erreur, ou données reçues.
 //  - RefreshIndicator: « tirer vers le bas pour actualiser ».
 //  - ListView.builder: ne construit que les cartes VISIBLES à l'écran (performance, même avec 500 galas).
+//
+// Nouveaux concepts :
+//  - DefaultTabController + TabBar + TabBarView : des onglets en haut de l'écran, qu'on change
+//    d'un appui ou en glissant le doigt sur le côté.
+//  - AutomaticKeepAliveClientMixin : garde un sous-onglet en mémoire quand on passe à l'autre
+//    (sinon il serait recréé, et la liste rechargée depuis le serveur, à chaque aller-retour).
 
 import 'package:flutter/material.dart';
 
@@ -14,32 +20,104 @@ import 'package:mbappat221_app/ecrans/galas/ecran_fiche_gala.dart';
 import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/page_resultats.dart';
 import 'package:mbappat221_app/services/gala_api.dart';
+import 'package:mbappat221_app/services/lutteur_api.dart';
 import 'package:mbappat221_app/theme/couleurs.dart';
 
-class EcranGalas extends StatefulWidget {
-  const EcranGalas({super.key, required this.galaApi});
+class EcranGalas extends StatelessWidget {
+  const EcranGalas({super.key, required this.galaApi, required this.lutteurApi});
 
-  /// Le service est reçu par le constructeur (injection, comme en Spring).
+  /// Les services sont reçus par le constructeur (injection, comme en Spring).
   final GalaApi galaApi;
+  final LutteurApi lutteurApi;   // pour ouvrir la fiche d'un finaliste depuis les résultats
 
   @override
-  State<EcranGalas> createState() => _EcranGalasState();
+  Widget build(BuildContext context) {
+    // DefaultTabController : relie la barre d'onglets (TabBar) et les pages (TabBarView).
+    // « length » doit être égal au nombre d'onglets.
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Galas', style: TextStyle(fontWeight: FontWeight.w800)),
+          // « bottom » : un widget collé sous le titre de la barre, ici les onglets.
+          bottom: const TabBar(
+            labelColor: Couleurs.noir,
+            unselectedLabelColor: Couleurs.grisTexte,
+            indicatorColor: Couleurs.or,
+            indicatorWeight: 3,
+            labelStyle: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+            tabs: [Tab(text: 'À venir'), Tab(text: 'Résultats')],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _ListeGalas(
+              // « galaApi.galasAVenir » sans parenthèses : on passe la MÉTHODE elle-même,
+              // que la liste appellera quand elle voudra (≈ une référence de méthode galaApi::galasAVenir).
+              charger: galaApi.galasAVenir,
+              galaApi: galaApi,
+              lutteurApi: lutteurApi,
+              vide: const _MessageVide(
+                icone: Icons.event_busy,
+                titre: 'Aucun gala annoncé pour le moment',
+                texte: 'Reviens bientôt : les prochains galas apparaîtront ici dès leur annonce.',
+              ),
+            ),
+            _ListeGalas(
+              charger: galaApi.galasTermines,
+              galaApi: galaApi,
+              lutteurApi: lutteurApi,
+              vide: const _MessageVide(
+                icone: Icons.emoji_events_outlined,
+                titre: 'Aucun résultat pour le moment',
+                texte: 'Les galas apparaîtront ici dès que leurs finales seront saisies.',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _EcranGalasState extends State<EcranGalas> {
+/// Une liste de galas (à venir ou terminés) : chargement, erreur, liste vide ou cartes.
+class _ListeGalas extends StatefulWidget {
+  const _ListeGalas({
+    required this.charger,
+    required this.galaApi,
+    required this.lutteurApi,
+    required this.vide,
+  });
+
+  /// La fonction qui charge la première page : « {int page, int taille} » sont ses paramètres nommés,
+  /// facultatifs, que l'on n'utilise pas ici (valeurs par défaut).
+  final Future<PageResultats<Gala>> Function({int page, int taille}) charger;
+  final GalaApi galaApi;
+  final LutteurApi lutteurApi;
+  final Widget vide;   // ce qu'on affiche quand la liste est vide
+
+  @override
+  State<_ListeGalas> createState() => _ListeGalasState();
+}
+
+// « with » : ajoute un « mixin », un morceau de classe réutilisable (≈ une interface Java
+// avec des méthodes par défaut). Ici il demande à Flutter de garder cet onglet en vie.
+class _ListeGalasState extends State<_ListeGalas> with AutomaticKeepAliveClientMixin {
   /// « late » : la variable sera initialisée plus tard (dans initState), mais avant toute lecture.
   late Future<PageResultats<Gala>> _chargement;
 
   @override
+  bool get wantKeepAlive => true;   // exigé par le mixin : oui, garder l'onglet
+
+  @override
   void initState() {
     super.initState();
-    // « widget » donne accès aux paramètres du StatefulWidget (ici galaApi).
-    _chargement = widget.galaApi.galasAVenir();
+    _chargement = widget.charger();
   }
 
-  /// Relance le chargement (bouton « Réessayer », bouton actualiser, ou geste « tirer vers le bas »).
+  /// Relance le chargement (bouton « Réessayer » ou geste « tirer vers le bas »).
   Future<void> _recharger() async {
-    final nouveauChargement = widget.galaApi.galasAVenir();
+    final nouveauChargement = widget.charger();
     setState(() => _chargement = nouveauChargement);
     try {
       await nouveauChargement;   // le geste « tirer » attend la fin du chargement
@@ -50,50 +128,31 @@ class _EcranGalasState extends State<EcranGalas> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Galas à venir', style: TextStyle(fontWeight: FontWeight.w800)),
-        actions: [
-          IconButton(
-            tooltip: 'Actualiser',
-            icon: const Icon(Icons.refresh),
-            onPressed: _recharger,
-          ),
-        ],
-      ),
-      // FutureBuilder<T> : « builder » est rappelé à chaque changement d'état du Future.
-      body: FutureBuilder<PageResultats<Gala>>(
-        future: _chargement,
-        builder: (context, etat) {
-          // 1. Chargement en cours → une roue qui tourne.
-          if (etat.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          // 2. Erreur (serveur arrêté, pas de réseau...) → message + bouton Réessayer.
-          if (etat.hasError) {
-            return _MessageErreur(message: '${etat.error}', surReessayer: _recharger);
-          }
-          // 3. Données reçues.
-          final galas = etat.requireData.contenu;
-          return RefreshIndicator(
-            onRefresh: _recharger,
-            color: Couleurs.noir,
-            child: galas.isEmpty ? const _AucunGala() : _ListeGalas(galas: galas, galaApi: widget.galaApi),
-          );
-        },
-      ),
+    super.build(context);   // obligatoire avec AutomaticKeepAliveClientMixin
+    // FutureBuilder<T> : « builder » est rappelé à chaque changement d'état du Future.
+    return FutureBuilder<PageResultats<Gala>>(
+      future: _chargement,
+      builder: (context, etat) {
+        // 1. Chargement en cours → une roue qui tourne.
+        if (etat.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        // 2. Erreur (serveur arrêté, pas de réseau...) → message + bouton Réessayer.
+        if (etat.hasError) {
+          return _MessageErreur(message: '${etat.error}', surReessayer: _recharger);
+        }
+        // 3. Données reçues.
+        final galas = etat.requireData.contenu;
+        return RefreshIndicator(
+          onRefresh: _recharger,
+          color: Couleurs.noir,
+          child: galas.isEmpty ? _ListeVide(enfant: widget.vide) : _cartes(galas),
+        );
+      },
     );
   }
-}
 
-class _ListeGalas extends StatelessWidget {
-  const _ListeGalas({required this.galas, required this.galaApi});
-
-  final List<Gala> galas;
-  final GalaApi galaApi;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _cartes(List<Gala> galas) {
     // ListView.separated : comme ListView.builder, avec un espace entre deux cartes.
     // itemBuilder est appelé seulement pour les cartes qui apparaissent à l'écran.
     return ListView.separated(
@@ -105,33 +164,49 @@ class _ListeGalas extends StatelessWidget {
         final gala = galas[index];
         return CarteGala(
           gala: gala,
-          urlAffiche: galaApi.urlFichier(gala.afficheUrl),
+          urlAffiche: widget.galaApi.urlFichier(gala.afficheUrl),
           // Un appui sur la carte ouvre la fiche du gala (nouvel écran par-dessus la liste).
-          surAppui: () => EcranFicheGala.ouvrir(context, gala: gala, galaApi: galaApi),
+          surAppui: () => EcranFicheGala.ouvrir(context,
+              gala: gala, galaApi: widget.galaApi, lutteurApi: widget.lutteurApi),
         );
       },
     );
   }
 }
 
-class _AucunGala extends StatelessWidget {
-  const _AucunGala();
+/// Un ListView (et pas un simple Center) pour que le geste « tirer vers le bas » fonctionne.
+class _ListeVide extends StatelessWidget {
+  const _ListeVide({required this.enfant});
+
+  final Widget enfant;
 
   @override
   Widget build(BuildContext context) {
-    // Un ListView (et pas un simple Center) pour que le geste « tirer vers le bas » fonctionne.
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(32),
-      children: const [
-        SizedBox(height: 80),
-        Icon(Icons.event_busy, size: 56, color: Couleurs.orTexte),
-        SizedBox(height: 16),
-        Text('Aucun gala annoncé pour le moment',
-            textAlign: TextAlign.center, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-        SizedBox(height: 8),
-        Text('Reviens bientôt : les prochains galas apparaîtront ici dès leur annonce.',
-            textAlign: TextAlign.center, style: TextStyle(color: Couleurs.grisTexte)),
+      children: [const SizedBox(height: 80), enfant],
+    );
+  }
+}
+
+class _MessageVide extends StatelessWidget {
+  const _MessageVide({required this.icone, required this.titre, required this.texte});
+
+  final IconData icone;
+  final String titre;
+  final String texte;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icone, size: 56, color: Couleurs.orTexte),
+        const SizedBox(height: 16),
+        Text(titre,
+            textAlign: TextAlign.center, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Text(texte, textAlign: TextAlign.center, style: const TextStyle(color: Couleurs.grisTexte)),
       ],
     );
   }

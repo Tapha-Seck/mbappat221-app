@@ -6,6 +6,7 @@
 
 import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/page_resultats.dart';
+import 'package:mbappat221_app/modeles/resultats_gala.dart';
 import 'package:mbappat221_app/services/client_api.dart';
 
 class GalaApi {
@@ -21,6 +22,21 @@ class GalaApi {
     );
     // « Gala.fromJson » sans parenthèses : on passe le constructeur lui-même (≈ Gala::new en Java).
     return PageResultats.fromJson(json, Gala.fromJson);
+  }
+
+  /// GET /api/galas/resultats : les galas TERMINÉS, du plus récent au plus ancien (onglet « Résultats »).
+  Future<PageResultats<Gala>> galasTermines({int page = 0, int taille = 20}) async {
+    final json = await _client.lireJson(
+      '/api/galas/resultats',
+      parametres: {'page': '$page', 'taille': '$taille'},
+    );
+    return PageResultats.fromJson(json, Gala.fromJson);
+  }
+
+  /// GET /api/galas/{id} : les points du gala et le résultat de chaque finale déjà saisie.
+  Future<ResultatsGala> resultats(int galaId) async {
+    final json = await _client.lireJson('/api/galas/$galaId');
+    return ResultatsGala.fromJson(json);
   }
 
   /// Adresse complète d'une affiche ou d'une photo (null s'il n'y en a pas).
