@@ -22,6 +22,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.6.0
   url_launcher: ^6.3.3
+  shared_preferences: ^2.5.6
 
 # Dépendances utilisées seulement pour les tests et l'analyse (comme <scope>test</scope>).
 dev_dependencies:
@@ -41,6 +42,7 @@ flutter:
   # Images embarquées dans l'application (le logo). Le / final = tout le dossier.
   assets:
     - assets/images/
+    - assets/images/presentation/   # les sous-dossiers doivent être déclarés un par un
 
   # Police Inter, fichiers dans assets/polices/ (comme des ressources dans src/main/resources).
   # « weight » indique la graisse de chaque fichier : 400 = normal (par défaut), 700 = gras, 900 = très gras.

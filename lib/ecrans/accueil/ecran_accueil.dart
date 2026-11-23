@@ -23,17 +23,32 @@ class EcranAccueil extends StatelessWidget {
     required this.galaApi,
     required this.classementApi,
     required this.lutteurApi,
+    this.surRecherche,
   });
 
   final GalaApi galaApi;
   final ClassementApi classementApi;
   final LutteurApi lutteurApi;   // pour ouvrir la fiche d'un leader
 
+  /// Appelée par la loupe : ouvre la recherche générale (null = pas de loupe).
+  /// L'accueil ne connaît pas l'écran de recherche : c'est EcranPrincipal qui décide quoi ouvrir
+  /// (≈ passer un Runnable en Java, plutôt qu'une dépendance de plus).
+  final VoidCallback? surRecherche;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 64,
+        // « leading » : la zone à GAUCHE du titre (là où se met d'habitude la flèche de retour).
+        // Pas de fonction de recherche fournie (null) : pas de loupe.
+        leading: surRecherche == null
+            ? null
+            : IconButton(
+          tooltip: 'Rechercher',
+          icon: const Icon(Icons.search, size: 28),
+          onPressed: surRecherche,
+        ),
         // Le logo à la place du titre texte. Image.asset lit une image EMBARQUÉE dans l'application
         // (déclarée dans pubspec.yaml, section assets), comme une ressource de src/main/resources.
         title: Image.asset(

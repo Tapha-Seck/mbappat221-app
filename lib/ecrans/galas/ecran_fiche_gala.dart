@@ -125,20 +125,6 @@ class EcranFicheGala extends StatelessWidget {
             ),
           ],
 
-          // Bouton « Retour » en bas de la fiche : pas besoin de remonter jusqu'à la flèche du haut.
-          // Navigator.pop ferme l'écran actuel et revient au précédent (le contraire de push).
-          const SizedBox(height: 32),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Retour'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Couleurs.noir,
-              side: const BorderSide(color: Couleurs.noir),
-              minimumSize: const Size.fromHeight(48),   // toute la largeur, 48 px de haut (facile à toucher)
-              textStyle: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
           const SizedBox(height: 24),
         ],
       ),

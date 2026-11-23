@@ -11,11 +11,13 @@ import 'package:mbappat221_app/modeles/fiche_lutteur.dart';
 import 'package:mbappat221_app/modeles/gala.dart';
 import 'package:mbappat221_app/modeles/lutteur.dart';
 import 'package:mbappat221_app/modeles/page_resultats.dart';
+import 'package:mbappat221_app/modeles/recherche.dart';
 import 'package:mbappat221_app/services/animateur_api.dart';
 import 'package:mbappat221_app/services/classement_api.dart';
 import 'package:mbappat221_app/services/client_api.dart';
 import 'package:mbappat221_app/services/gala_api.dart';
 import 'package:mbappat221_app/services/lutteur_api.dart';
+import 'package:mbappat221_app/services/recherche_api.dart';
 import 'package:mbappat221_app/services/referentiel_api.dart';
 import 'package:mbappat221_app/services/services_api.dart';
 
@@ -37,6 +39,7 @@ ServicesApi servicesFactices({
     classements: ClassementApiFactice(classements: classements, podiumSaison: podium),
     animateurs: AnimateurApiFactice(animateurs: animateurs, profils: profils),
     referentiel: ReferentielApiFactice(liste: categories),
+    recherche: RechercheApiFactice(galas: galas, lutteurs: lutteurs, animateurs: animateurs),
   );
 }
 
@@ -143,6 +146,38 @@ class AnimateurApiFactice implements AnimateurApi {
       throw const ApiException('Animateur introuvable');
     }
     return profil;
+  }
+
+  @override
+  String? urlFichier(String? chemin) => null;
+}
+
+/// Cherche dans les mêmes listes que les autres faux services, comme le vrai serveur :
+/// lutteurs (nom, surnom, écurie), galas (nom, lieu, région, organisateur), animateurs (nom, surnom).
+class RechercheApiFactice implements RechercheApi {
+  RechercheApiFactice({this.galas = const [], this.lutteurs = const [], this.animateurs = const []});
+
+  final List<Gala> galas;
+  final List<LutteurListe> lutteurs;
+  final List<AnimateurDetail> animateurs;
+
+  @override
+  Future<ResultatRecherche> rechercher(String texte) async {
+    final t = texte.trim().toLowerCase();
+    bool contient(String champs) => champs.toLowerCase().contains(t);   // fonction locale (≈ une lambda nommée)
+
+    return ResultatRecherche(
+      texte: texte.trim(),
+      lutteurs: _page(lutteurs.where((l) => contient('${l.nom} ${l.surnom ?? ''} ${l.ecurieNom ?? ''}'))),
+      galas: _page(galas.where((g) => contient('${g.nom} ${g.lieu} ${g.region} ${g.organisateur ?? ''}'))),
+      animateurs: _page(animateurs.where((a) => contient('${a.nom} ${a.surnom ?? ''}'))),
+    );
+  }
+
+  /// <T> : méthode générique, comme « private static <T> PageDto<T> page(...) » en Java.
+  static PageResultats<T> _page<T>(Iterable<T> trouves) {
+    final contenu = trouves.take(5).toList();
+    return PageResultats(contenu: contenu, page: 0, taille: 5, totalElements: trouves.length, totalPages: 1);
   }
 
   @override

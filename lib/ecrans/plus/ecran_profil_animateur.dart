@@ -180,18 +180,6 @@ class _Profil extends StatelessWidget {
             ),
         ],
 
-        const SizedBox(height: 32),
-        OutlinedButton.icon(
-          onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(Icons.arrow_back),
-          label: const Text('Retour'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Couleurs.noir,
-            side: const BorderSide(color: Couleurs.noir),
-            minimumSize: const Size.fromHeight(48),
-            textStyle: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
         const SizedBox(height: 24),
       ],
     );

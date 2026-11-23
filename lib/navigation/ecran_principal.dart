@@ -10,6 +10,7 @@ import 'package:mbappat221_app/ecrans/classement/ecran_classement.dart';
 import 'package:mbappat221_app/ecrans/galas/ecran_galas.dart';
 import 'package:mbappat221_app/ecrans/lutteurs/ecran_lutteurs.dart';
 import 'package:mbappat221_app/ecrans/plus/ecran_plus.dart';
+import 'package:mbappat221_app/ecrans/recherche/ecran_recherche.dart';
 import 'package:mbappat221_app/services/services_api.dart';
 
 class EcranPrincipal extends StatefulWidget {
@@ -33,6 +34,8 @@ class _EcranPrincipalState extends State<EcranPrincipal> {
       galaApi: widget.services.galas,
       classementApi: widget.services.classements,
       lutteurApi: widget.services.lutteurs,
+      // La loupe ouvre la recherche générale, qui reçoit TOUS les services.
+      surRecherche: () => EcranRecherche.ouvrir(context, widget.services),
     ),
     EcranGalas(galaApi: widget.services.galas),
     EcranLutteurs(lutteurApi: widget.services.lutteurs, referentielApi: widget.services.referentiel),

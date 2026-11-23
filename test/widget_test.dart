@@ -15,6 +15,8 @@ import 'package:mbappat221_app/ecrans/galas/ecran_galas.dart';
 import 'package:mbappat221_app/ecrans/lutteurs/ecran_fiche_lutteur.dart';
 import 'package:mbappat221_app/ecrans/lutteurs/ecran_lutteurs.dart';
 import 'package:mbappat221_app/ecrans/plus/ecran_a_propos.dart';
+import 'package:mbappat221_app/ecrans/presentation/ecran_presentation.dart';
+import 'package:mbappat221_app/ecrans/recherche/ecran_recherche.dart';
 import 'package:mbappat221_app/ecrans/plus/ecran_animateurs.dart';
 import 'package:mbappat221_app/ecrans/plus/ecran_profil_animateur.dart';
 import 'package:mbappat221_app/modeles/animateur.dart';
@@ -265,8 +267,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(EcranFicheGala), findsOneWidget);
 
-      // Le bouton « Retour » en bas de la fiche ramène à l'accueil.
-      await tester.tap(texteDans(EcranFicheGala, 'Retour'));
+      // La flèche retour (en haut à gauche) ramène à l'accueil.
+      await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(EcranFicheGala), findsNothing);
       expect(ongletActif(tester), 0);
@@ -332,7 +334,7 @@ void main() {
       expect(texteDans(EcranFicheLutteur, 'Victoire contre Olympique'), findsOneWidget);
       expect(texteDans(EcranFicheLutteur, '+5 pts'), findsOneWidget);
 
-      await tester.tap(texteDans(EcranFicheLutteur, 'Retour'));
+      await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(EcranFicheLutteur), findsNothing);
     });
@@ -478,5 +480,94 @@ void main() {
     expect(texteDans(EcranAPropos, 'Les promoteurs'), findsOneWidget);
     expect(texteDans(EcranAPropos, 'La billetterie'), findsOneWidget);
     expect(texteDans(EcranAPropos, 'Version ${EcranAPropos.version}'), findsOneWidget);
+  });
+
+  group('Présentation (premier lancement)', () {
+    testWidgets('3 pages avec Suivant, puis Commencer ouvre l\'accueil', (tester) async {
+      var vue = false;
+      await tester.pumpWidget(Mbappat221App(
+        services: servicesFactices(),
+        afficherPresentation: true,
+        surPresentationVue: () => vue = true,
+      ));
+
+      expect(find.text('Bienvenue sur Mbappat 221'), findsOneWidget);
+      await tester.tap(find.text('Suivant'));
+      await tester.pumpAndSettle();
+      expect(find.text('Galas et classement'), findsOneWidget);
+      await tester.tap(find.text('Suivant'));
+      await tester.pumpAndSettle();
+      expect(find.text('Lutteurs, animateurs et Tv Tv'), findsOneWidget);
+      expect(find.text('Passer'), findsNothing);   // plus de « Passer » sur la dernière page
+
+      await tester.tap(find.text('Commencer'));
+      await tester.pumpAndSettle();
+
+      expect(vue, isTrue);
+      expect(find.byType(EcranPresentation), findsNothing);
+      expect(find.byType(NavigationBar), findsOneWidget);   // l'accueil et ses 5 onglets
+    });
+
+    testWidgets('« Passer » va directement à l\'accueil', (tester) async {
+      var vue = false;
+      await tester.pumpWidget(Mbappat221App(
+        services: servicesFactices(),
+        afficherPresentation: true,
+        surPresentationVue: () => vue = true,
+      ));
+
+      await tester.tap(find.text('Passer'));
+      await tester.pumpAndSettle();
+
+      expect(vue, isTrue);
+      expect(find.byType(NavigationBar), findsOneWidget);
+    });
+  });
+
+  group('Recherche générale (loupe de l\'accueil)', () {
+    /// Ouvre la recherche depuis l'accueil, tape [texte] et attend la fin de la minuterie de 350 ms.
+    Future<void> rechercher(WidgetTester tester, String texte) async {
+      await tester.pumpWidget(Mbappat221App(
+        services: servicesFactices(galas: [_galaDeThies], lutteurs: _lutteurs, animateurs: [_diva, _griot],
+            profils: _profils),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Rechercher'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EcranRecherche), findsOneWidget);
+
+      await tester.enterText(
+          find.descendant(of: find.byType(EcranRecherche), matching: find.byType(TextField)), texte);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('« fass » trouve le lutteur de l\'écurie et le gala qu\'elle organise', (tester) async {
+      await rechercher(tester, 'fass');
+
+      expect(texteDans(EcranRecherche, 'LUTTEURS'), findsOneWidget);
+      expect(texteDans(EcranRecherche, 'Modou Sarr'), findsOneWidget);
+      expect(texteDans(EcranRecherche, 'Lion de Fimela'), findsNothing);
+      expect(texteDans(EcranRecherche, 'GALAS'), findsOneWidget);
+      expect(texteDans(EcranRecherche, 'ANIMATEURS ET TV TV'), findsNothing);   // rubrique vide : cachée
+
+      await tester.tap(texteDans(EcranRecherche, 'Grand gala de Thiès'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EcranFicheGala), findsOneWidget);
+    });
+
+    testWidgets('un animateur ouvre son profil', (tester) async {
+      await rechercher(tester, 'diva');
+
+      await tester.tap(texteDans(EcranRecherche, 'La Diva'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EcranProfilAnimateur), findsOneWidget);
+    });
+
+    testWidgets('aucun résultat : message', (tester) async {
+      await rechercher(tester, 'zzz');
+
+      expect(texteDans(EcranRecherche, 'Aucun résultat pour « zzz »'), findsOneWidget);
+    });
   });
 }
